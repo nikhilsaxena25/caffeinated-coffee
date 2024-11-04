@@ -286,10 +286,60 @@ def view_orders():
     # Display the orders data in a table
     st.table(orders_data)
 
-# Main Layout with Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+# Section 8: Delete Coffee Bean
+def delete_coffee_bean():
+    st.header("Delete a Coffee Bean")
+    beans = session.query(CoffeeBean).all()
+    if beans:
+        bean_names = [bean.name for bean in beans]
+        selected_bean = st.selectbox("Select Coffee Bean to Delete", options=bean_names)
+        
+        if st.button("Delete Coffee Bean"):
+            bean_to_delete = session.query(CoffeeBean).filter_by(name=selected_bean).first()
+            
+            if bean_to_delete:
+                # Delete all order items associated with this bean
+                session.query(OrderItem).filter_by(bean_id=bean_to_delete.bean_id).delete()
+                
+                # Delete the coffee bean itself
+                session.delete(bean_to_delete)
+                session.commit()
+                
+                st.success(f"Coffee bean '{selected_bean}' and associated items have been deleted.")
+                st.rerun()
+    else:
+        st.write("No coffee beans available to delete.")
+
+# Section 9: Delete Order
+def delete_order():
+    st.header("Delete an Order")
+    orders = session.query(Order).all()
+    if orders:
+        order_ids = [order.order_id for order in orders]
+        selected_order_id = st.selectbox("Select Order ID to Delete", options=order_ids)
+        
+        if st.button("Delete Order"):
+            order_to_delete = session.query(Order).filter_by(order_id=selected_order_id).first()
+            
+            if order_to_delete:
+                # Delete all items associated with this order
+                session.query(OrderItem).filter_by(order_id=selected_order_id).delete()
+                
+                # Delete the order itself
+                session.delete(order_to_delete)
+                session.commit()
+                
+                st.success(f"Order ID '{selected_order_id}' and associated items have been deleted.")
+                st.rerun()
+    else:
+        st.write("No orders available to delete.")
+
+
+# Main Layout with Tabs, including delete options
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "Add Coffee Bean", "Place Order", "Low Stock Alert", 
-    "Monthly Sales Report", "Top-Selling Beans", "Update Order Status", "View Orders"
+    "Monthly Sales Report", "Top-Selling Beans", "Update Order Status", 
+    "View Orders", "Delete Coffee Bean", "Delete Order"
 ])
 
 with tab1:
@@ -306,6 +356,10 @@ with tab6:
     update_order_status()
 with tab7:
     view_orders()
+with tab8:
+    delete_coffee_bean()
+with tab9:
+    delete_order()
 
 # Ensure default user exists on startup
 ensure_user_exists()
