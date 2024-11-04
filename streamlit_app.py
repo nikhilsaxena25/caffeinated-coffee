@@ -368,10 +368,37 @@ def update_coffee_bean():
     else:
         st.write("No coffee beans available for updating.")
 
-# Main Layout with Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
+from sqlalchemy import text
+
+# Section 11: View All Coffee Beans
+def view_all_beans():
+    st.header("All Coffee Beans")
+
+    # Prepared statement to retrieve all coffee beans
+    beans_query = text("""
+        SELECT bean_id, name, origin, roast_level, price_per_gram, stock_quantity
+        FROM CoffeeBeans
+        ORDER BY bean_id
+    """)
+    beans = session.execute(beans_query).fetchall()
+    
+    # Prepare the data for display
+    beans_data = [{
+        "Bean ID": bean.bean_id,
+        "Name": bean.name,
+        "Origin": bean.origin,
+        "Roast Level": bean.roast_level,
+        "Price per Gram": f"${bean.price_per_gram:.2f}",
+        "Stock Quantity": bean.stock_quantity
+    } for bean in beans]
+
+    # Display the data in a table
+    st.table(beans_data)
+
+# Updated Main Layout with Tabs, ordered by functionality
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
     "Add Coffee Bean", "Update Coffee Bean", "Delete Coffee Bean", 
-    "Place Order", "Update Order Status", "Delete Order",
+    "View All Beans", "Place Order", "Update Order Status", "Delete Order",
     "Low Stock Alert", "Monthly Sales Report", "Top-Selling Beans", 
     "View Orders"
 ])
@@ -383,18 +410,20 @@ with tab2:
 with tab3:
     delete_coffee_bean()            # Data deletion for coffee beans
 with tab4:
-    place_order()                   # Placing orders
+    view_all_beans()                # Viewing all coffee beans
 with tab5:
-    update_order_status()           # Updating order status
+    place_order()                   # Placing orders
 with tab6:
-    delete_order()                  # Deleting orders
+    update_order_status()           # Updating order status
 with tab7:
-    low_stock_alert()               # Inventory alert for low stock
+    delete_order()                  # Deleting orders
 with tab8:
-    monthly_sales_report()          # Generating monthly sales report
+    low_stock_alert()               # Inventory alert for low stock
 with tab9:
-    top_selling_beans()             # Report of top-selling coffee beans
+    monthly_sales_report()          # Generating monthly sales report
 with tab10:
+    top_selling_beans()             # Report of top-selling coffee beans
+with tab11:
     view_orders()                   # Viewing all orders
 
 # Ensure default user exists on startup
