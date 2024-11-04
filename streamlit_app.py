@@ -368,8 +368,6 @@ def update_coffee_bean():
     else:
         st.write("No coffee beans available for updating.")
 
-from sqlalchemy import text
-
 # Section 11: View All Coffee Beans
 def view_all_beans():
     st.header("All Coffee Beans")
