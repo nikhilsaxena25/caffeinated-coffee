@@ -58,7 +58,7 @@ st.title("☕ Welcome to Caffeinated Coffee ☕")
 def ensure_user_exists():
     user = session.query(User).filter_by(user_id=1).first()
     if not user:
-        new_user = User(user_id=1, name="Default User", email="user@example.com")
+        new_user = User(user_id=1, name=":D User", email="user@example.com")
         session.add(new_user)
         session.commit()
 
