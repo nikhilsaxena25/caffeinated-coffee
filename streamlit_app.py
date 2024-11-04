@@ -370,31 +370,32 @@ def update_coffee_bean():
 
 # Main Layout with Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
-    "Add Coffee Bean", "Place Order", "Low Stock Alert", 
-    "Monthly Sales Report", "Top-Selling Beans", "Update Order Status", 
-    "View Orders", "Delete Coffee Bean", "Delete Order", "Update Coffee Bean"
+    "Add Coffee Bean", "Update Coffee Bean", "Delete Coffee Bean", 
+    "Place Order", "Update Order Status", "Delete Order",
+    "Low Stock Alert", "Monthly Sales Report", "Top-Selling Beans", 
+    "View Orders"
 ])
 
 with tab1:
-    add_coffee_bean()
+    add_coffee_bean()               # Data entry for adding coffee beans
 with tab2:
-    place_order()
+    update_coffee_bean()            # Data update for coffee beans
 with tab3:
-    low_stock_alert()
+    delete_coffee_bean()            # Data deletion for coffee beans
 with tab4:
-    monthly_sales_report()
+    place_order()                   # Placing orders
 with tab5:
-    top_selling_beans()
+    update_order_status()           # Updating order status
 with tab6:
-    update_order_status()
+    delete_order()                  # Deleting orders
 with tab7:
-    view_orders()
+    low_stock_alert()               # Inventory alert for low stock
 with tab8:
-    delete_coffee_bean()
+    monthly_sales_report()          # Generating monthly sales report
 with tab9:
-    delete_order()
+    top_selling_beans()             # Report of top-selling coffee beans
 with tab10:
-    update_coffee_bean()
+    view_orders()                   # Viewing all orders
 
 # Ensure default user exists on startup
 ensure_user_exists()
