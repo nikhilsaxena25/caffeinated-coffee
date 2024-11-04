@@ -141,6 +141,7 @@ def place_order():
         else:
             st.write("The selected coffee bean is out of stock.")
 
+
 # Section 3: Low Stock Alert and Restock Function
 def low_stock_alert():
     st.header("Low Stock Alert")
