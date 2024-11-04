@@ -2,7 +2,6 @@ import streamlit as st
 from sqlalchemy import create_engine, Column, Integer, String, Float, Date, ForeignKey, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime
-import time
 
 # Database setup
 engine = create_engine('sqlite:///caffeinated.db')
@@ -54,7 +53,7 @@ Base.metadata.create_all(engine)
 st.set_page_config(page_title="Caffeinated", page_icon="☕", layout="wide")
 st.title("☕ Welcome to Caffeinated Coffee ☕")
 
-# Ensure a default user exists
+# Ensure a default user exists as placeholder
 def ensure_user_exists():
     user = session.query(User).filter_by(user_id=1).first()
     if not user:
@@ -64,8 +63,8 @@ def ensure_user_exists():
 
 # Reset all data (both database and session state)
 def reset_all_data():
-    Base.metadata.drop_all(engine)  # Drop all tables
-    Base.metadata.create_all(engine)  # Recreate tables
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     ensure_user_exists()  # Ensure user exists after reset
     st.success("All data has been reset!")
 
@@ -105,7 +104,6 @@ def place_order():
     if beans:
         bean_names = [bean.name for bean in beans]
         selected_bean = st.selectbox("Choose Coffee Bean", options=bean_names)
-        
         selected_bean_obj = session.query(CoffeeBean).filter_by(name=selected_bean).first()
         
         if selected_bean_obj and selected_bean_obj.stock_quantity > 0:
@@ -141,7 +139,6 @@ def place_order():
         else:
             st.write("The selected coffee bean is out of stock.")
 
-
 # Section 3: Low Stock Alert and Restock Function
 def low_stock_alert():
     st.header("Low Stock Alert")
@@ -152,7 +149,7 @@ def low_stock_alert():
         FROM CoffeeBeans
         WHERE stock_quantity < :threshold
     """)
-    low_stock_beans = session.execute(low_stock_query, {"threshold": threshold}).fetchall()
+    low_stock_beans = session.execute(low_stock_query, {"threshold": threshold}).fetchall() #select a threshold 
 
     if low_stock_beans:
         for bean in low_stock_beans:
@@ -240,12 +237,9 @@ def update_order_status():
         st.write("No orders available to update.")
 
 # Section 7: View All Orders
-from datetime import datetime
-
 def view_orders():
     st.header("All Orders")
 
-    # Retrieve all orders with a prepared statement
     orders_query = text("""
         SELECT Orders.order_id, Users.name AS user_name, Orders.status, Orders.total_price, Orders.order_date
         FROM Orders
@@ -254,10 +248,7 @@ def view_orders():
     """)
     orders = session.execute(orders_query).fetchall()
     
-    # Prepare a list to hold order data for the table
     orders_data = []
-
-    # Loop through orders and gather data, including items for each order
     for order in orders:
         items_query = text("""
             SELECT CoffeeBeans.name AS bean_name, OrderItems.quantity, OrderItems.price
@@ -267,14 +258,15 @@ def view_orders():
         """)
         items = session.execute(items_query, {"order_id": order.order_id}).fetchall()
         
-        # Format each item as a string to show within the table
         items_list = [f"{item.bean_name}: {item.quantity} grams at ${item.price:.2f}" for item in items]
-        items_str = "\n".join(items_list)  # Join each item with a newline for better readability
+        items_str = "\n".join(items_list)  # better readablity 
 
-        # Convert order_date to a formatted string if it's a datetime object
-        order_date_str = order.order_date.strftime("%Y-%m-%d") if isinstance(order.order_date, datetime) else order.order_date
+        # datetime -> string
+        if isinstance(order.order_date, datetime):
+            order_date_str = order.order_date.strftime("%Y-%m-%d")
+        else:
+            order_date_str = order.order_date
         
-        # Append order details along with items to the data list
         orders_data.append({
             "Order ID": order.order_id,
             "User": order.user_name,
@@ -284,7 +276,6 @@ def view_orders():
             "Items": items_str
         })
 
-    # Display the orders data in a table
     st.table(orders_data)
 
 # Section 8: Delete Coffee Bean
@@ -299,10 +290,9 @@ def delete_coffee_bean():
             bean_to_delete = session.query(CoffeeBean).filter_by(name=selected_bean).first()
             
             if bean_to_delete:
-                # Delete all order items associated with this bean
                 session.query(OrderItem).filter_by(bean_id=bean_to_delete.bean_id).delete()
                 
-                # Delete the coffee bean itself
+                # Delete the coffee bean
                 session.delete(bean_to_delete)
                 session.commit()
                 
@@ -323,10 +313,9 @@ def delete_order():
             order_to_delete = session.query(Order).filter_by(order_id=selected_order_id).first()
             
             if order_to_delete:
-                # Delete all items associated with this order
                 session.query(OrderItem).filter_by(order_id=selected_order_id).delete()
                 
-                # Delete the order itself
+                # Delete the order
                 session.delete(order_to_delete)
                 session.commit()
                 
@@ -335,8 +324,7 @@ def delete_order():
     else:
         st.write("No orders available to delete.")
 
-
-# Main Layout with Tabs, including delete options
+# Main Layout with Tabs
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "Add Coffee Bean", "Place Order", "Low Stock Alert", 
     "Monthly Sales Report", "Top-Selling Beans", "Update Order Status", 
