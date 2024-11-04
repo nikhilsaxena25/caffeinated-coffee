@@ -232,11 +232,10 @@ def update_order_status():
             st.write(f"Order ID: {order.order_id} - Current Status: {order.status}")
             
             new_status = st.selectbox(
-                f"Update Status for Order {order.order_id}", 
-                ["Pending", "Shipped", "Delivered"], 
-                index=["Pending", "Shipped", "Delivered"].index(order.status), 
-                key=f"status_{order.order_id}"
-            )
+            f"Update Status for Order {order.order_id}",
+            ["Pending", "Shipped", "Delivered"],
+            index=["Pending", "Shipped", "Delivered"].index(order.status),
+            key=f"status_{order.order_id}")
             
             if st.button(f"Update Status", key=f"update_status_{order.order_id}"):
                 if new_status != order.status:
@@ -351,7 +350,7 @@ def update_coffee_bean():
         if selected_bean:
             new_name = st.text_input("Bean Name", value=selected_bean.name)
             new_origin = st.text_input("Origin", value=selected_bean.origin)
-            new_roast_level = st.selectbox("Roast Level", options=["Light", "Medium", "Dark"], index=["Light", "Medium", "Dark"].index(selected_bean.roast_level))
+            new_roast_level = st.selectbox("Roast Level", options=["Light", "Medium", "Dark"], index=["Light", "Medium", "Dark"].index(selected_bean.roast_level), key=f"update_coffee_bean_roast_level_{selected_bean.bean_id}")
             new_price_per_gram = st.number_input("Price per Gram ($)", min_value=0.01, step=0.01, value=selected_bean.price_per_gram)
 
             # Update button to save changes
