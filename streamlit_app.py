@@ -95,7 +95,7 @@ def add_coffee_bean():
         st.success(f"Added '{name}' to the coffee beans list!")
         st.rerun()
 
-# Section 2: Place an Order
+# Section 2: Place an Order with Origin Display
 def place_order():
     st.header("Place an Order")
     ensure_user_exists()
@@ -103,41 +103,52 @@ def place_order():
     beans = session.query(CoffeeBean).all()
     if beans:
         bean_names = [bean.name for bean in beans]
-        selected_bean = st.selectbox("Choose Coffee Bean", options=bean_names)
-        selected_bean_obj = session.query(CoffeeBean).filter_by(name=selected_bean).first()
+        selected_bean_name = st.selectbox("Choose Coffee Bean", options=bean_names)
         
-        if selected_bean_obj and selected_bean_obj.stock_quantity > 0:
-            quantity = st.number_input(
-                f"Select quantity for {selected_bean}",
-                min_value=1,
-                max_value=selected_bean_obj.stock_quantity,
-                step=1
-            )
+        selected_bean = session.query(CoffeeBean).filter_by(name=selected_bean_name).first()
+        
+        # additional details about the selected bean
+        if selected_bean:
+            st.write(f"**Origin**: {selected_bean.origin}")
+            st.write(f"**Roast Level**: {selected_bean.roast_level}")
+            st.write(f"**Price per Gram**: ${selected_bean.price_per_gram:.2f}")
             
-            if st.button("Place Order"):
-                total_price = selected_bean_obj.price_per_gram * quantity
-                new_order = Order(
-                    user_id=1,
-                    total_price=total_price,
-                    status="Pending"
+            # Quantity selection
+            if selected_bean.stock_quantity > 0:
+                quantity = st.number_input(
+                    f"Select quantity for {selected_bean.name}",
+                    min_value=1,
+                    max_value=selected_bean.stock_quantity,
+                    step=1
                 )
-                session.add(new_order)
-                session.flush()
+                
+                # Button to place the order
+                if st.button("Place Order"):
+                    total_price = selected_bean.price_per_gram * quantity
+                    new_order = Order(
+                        user_id=1,
+                        total_price=total_price,
+                        status="Pending"
+                    )
+                    session.add(new_order)
+                    session.flush()
 
-                order_item = OrderItem(
-                    order_id=new_order.order_id,
-                    bean_id=selected_bean_obj.bean_id,
-                    quantity=quantity,
-                    price=total_price
-                )
-                session.add(order_item)
+                    order_item = OrderItem(
+                        order_id=new_order.order_id,
+                        bean_id=selected_bean.bean_id,
+                        quantity=quantity,
+                        price=total_price
+                    )
+                    session.add(order_item)
 
-                selected_bean_obj.stock_quantity -= quantity
-                session.commit()
+                    selected_bean.stock_quantity -= quantity
+                    session.commit()
 
-                st.success(f"Order placed for {quantity} grams of {selected_bean}!")
-        else:
-            st.write("The selected coffee bean is out of stock.")
+                    st.success(f"Order placed for {quantity} grams of {selected_bean.name}!")
+            else:
+                st.write("The selected coffee bean is out of stock.")
+    else:
+        st.write("No coffee beans available for ordering.")
 
 # Section 3: Low Stock Alert and Restock Function
 def low_stock_alert():
@@ -324,11 +335,44 @@ def delete_order():
     else:
         st.write("No orders available to delete.")
 
+# Section 10: Update Coffee Bean Details (excluding stock quantity)
+def update_coffee_bean():
+    st.header("Update Coffee Bean Details")
+
+    # Fetch all coffee beans
+    beans = session.query(CoffeeBean).all()
+    if beans:
+        bean_names = [bean.name for bean in beans]
+        selected_bean_name = st.selectbox("Select Coffee Bean to Update", options=bean_names)
+        
+        # Retrieve the selected bean from the database
+        selected_bean = session.query(CoffeeBean).filter_by(name=selected_bean_name).first()
+        
+        if selected_bean:
+            new_name = st.text_input("Bean Name", value=selected_bean.name)
+            new_origin = st.text_input("Origin", value=selected_bean.origin)
+            new_roast_level = st.selectbox("Roast Level", options=["Light", "Medium", "Dark"], index=["Light", "Medium", "Dark"].index(selected_bean.roast_level))
+            new_price_per_gram = st.number_input("Price per Gram ($)", min_value=0.01, step=0.01, value=selected_bean.price_per_gram)
+
+            # Update button to save changes
+            if st.button("Update Coffee Bean"):
+                # Update bean properties
+                selected_bean.name = new_name
+                selected_bean.origin = new_origin
+                selected_bean.roast_level = new_roast_level
+                selected_bean.price_per_gram = new_price_per_gram
+                
+                session.commit()
+                st.success(f"Coffee bean '{new_name}' has been updated successfully.")
+                st.rerun()
+    else:
+        st.write("No coffee beans available for updating.")
+
 # Main Layout with Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "Add Coffee Bean", "Place Order", "Low Stock Alert", 
     "Monthly Sales Report", "Top-Selling Beans", "Update Order Status", 
-    "View Orders", "Delete Coffee Bean", "Delete Order"
+    "View Orders", "Delete Coffee Bean", "Delete Order", "Update Coffee Bean"
 ])
 
 with tab1:
@@ -349,6 +393,8 @@ with tab8:
     delete_coffee_bean()
 with tab9:
     delete_order()
+with tab10:
+    update_coffee_bean()
 
 # Ensure default user exists on startup
 ensure_user_exists()
