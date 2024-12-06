@@ -49,6 +49,9 @@ class OrderItem(Base):
 Order.items = relationship("OrderItem", back_populates="order")
 Base.metadata.create_all(engine)
 
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_bean_id ON CoffeeBeans(bean_id);"))
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_order_date ON Orders(order_date);"))
+
 # Streamlit setup
 st.set_page_config(page_title="Caffeinated", page_icon="☕", layout="wide")
 st.title("☕ Welcome to Caffeinated Coffee ☕")
