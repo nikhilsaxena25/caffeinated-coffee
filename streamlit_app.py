@@ -4,12 +4,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime
+import pandas as pd
 
-# Database setup with SERIALIZABLE isolation level
+# Database setup with READ UNCOMMITTED isolation level
 engine = create_engine('sqlite:///caffeinated.db', isolation_level="READ UNCOMMITTED")
 Session = sessionmaker(bind=engine)
 session = Session()
-Base = declarative_base()   
+Base = declarative_base()
 
 # Database Models
 class User(Base):
@@ -53,8 +54,10 @@ Order.items = relationship("OrderItem", back_populates="order")
 Base.metadata.create_all(engine)
 
 # Indexes for Optimization
-session.execute(text("CREATE INDEX IF NOT EXISTS idx_bean_id ON CoffeeBeans(bean_id);"))
 session.execute(text("CREATE INDEX IF NOT EXISTS idx_order_date ON Orders(order_date);"))
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_stock_quantity ON CoffeeBeans(stock_quantity);"))
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_user_id ON Orders(user_id);"))
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_status ON Orders(status);"))
 
 # Streamlit UI
 st.set_page_config(page_title="Caffeinated", page_icon="☕", layout="wide")
@@ -73,6 +76,7 @@ def reset_all_data():
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     ensure_user_exists()
+    st.rerun()
     st.success("Database reset completed!")
 
 # Sidebar with Reset Option
@@ -214,7 +218,7 @@ def place_order():
                     total_price = selected_bean.price_per_gram * quantity
 
                     try:
-                        # Use a transaction to handle placing the order
+                        # use of transaction for placing order
                         with session.begin_nested():
                             # Check stock before proceeding
                             if selected_bean.stock_quantity < quantity:
@@ -273,6 +277,8 @@ def delete_order():
 # View All Orders
 def view_orders():
     st.header("All Orders")
+
+    # Query to fetch orders with user details
     orders_query = text("""
         SELECT Orders.order_id, Users.name AS user_name, Orders.status, Orders.total_price, Orders.order_date
         FROM Orders
@@ -280,14 +286,32 @@ def view_orders():
         ORDER BY Orders.order_date DESC
     """)
     orders = session.execute(orders_query).fetchall()
-    if orders:
-        st.table([{
+
+    # List to store the final data
+    orders_data = []
+
+    # Add a column for total quantity ordered
+    for order in orders:
+        # Query to calculate the total amount ordered for each order
+        total_quantity_query = text("""
+            SELECT SUM(OrderItems.quantity) AS total_quantity
+            FROM OrderItems
+            WHERE OrderItems.order_id = :order_id
+        """)
+        total_quantity = session.execute(total_quantity_query, {"order_id": order.order_id}).scalar() or 0
+
+        orders_data.append({
             "Order ID": order.order_id,
             "User": order.user_name,
             "Status": order.status,
             "Total Price": f"${order.total_price:.2f}",
-            "Order Date": order.order_date
-        } for order in orders])
+            "Amount Ordered (grams)": total_quantity,
+            "Order Date": order.order_date.strftime("%Y-%m-%d") if isinstance(order.order_date, datetime) else order.order_date
+        })
+
+    if orders_data:
+        orders_df = pd.DataFrame(orders_data)
+        st.dataframe(orders_df, hide_index=True)
     else:
         st.write("No orders available.")
 
