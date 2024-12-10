@@ -71,6 +71,73 @@ def ensure_user_exists():
         session.add(new_user)
         session.commit()
 
+# Function to load demo coffee beans and orders
+def load_demo_data_and_orders():
+    try:
+        # Demo coffee bean data
+        demo_beans = [
+            {"name": "Arabica", "origin": "Brazil", "roast_level": "Medium", "price_per_gram": 0.05, "stock_quantity": 1000},
+            {"name": "Robusta", "origin": "Vietnam", "roast_level": "Dark", "price_per_gram": 0.03, "stock_quantity": 500},
+            {"name": "Blue Mountain", "origin": "Jamaica", "roast_level": "Light", "price_per_gram": 0.10, "stock_quantity": 200},
+            {"name": "Ethiopian Yirgacheffe", "origin": "Ethiopia", "roast_level": "Medium", "price_per_gram": 0.08, "stock_quantity": 300},
+            {"name": "Colombian Supremo", "origin": "Colombia", "roast_level": "Dark", "price_per_gram": 0.07, "stock_quantity": 800},
+        ]
+
+        # Ensure the default user exists
+        ensure_user_exists()
+
+        # Add coffee beans
+        for bean in demo_beans:
+            new_bean = CoffeeBean(**bean)
+            session.add(new_bean)
+        session.flush()  # Flush to generate bean IDs for order creation
+
+        # Fetch all added beans
+        beans = session.query(CoffeeBean).all()
+
+        # Demo order data (order quantities and statuses)
+        demo_orders = [
+            {"bean_id": beans[0].bean_id, "quantity": 50, "status": "Pending"},
+            {"bean_id": beans[1].bean_id, "quantity": 100, "status": "Shipped"},
+            {"bean_id": beans[2].bean_id, "quantity": 25, "status": "Delivered"},
+            {"bean_id": beans[3].bean_id, "quantity": 10, "status": "Pending"},
+            {"bean_id": beans[4].bean_id, "quantity": 75, "status": "Shipped"},
+        ]
+
+        # Add orders and reduce stock
+        for order_data in demo_orders:
+            # Calculate total price
+            bean = session.query(CoffeeBean).filter_by(bean_id=order_data["bean_id"]).first()
+            total_price = bean.price_per_gram * order_data["quantity"]
+
+            # Create a new order
+            new_order = Order(
+                user_id=1,  # Default user
+                total_price=total_price,
+                status=order_data["status"],
+            )
+            session.add(new_order)
+            session.flush()  # Get the order ID for the order item
+
+            # Create an order item
+            new_order_item = OrderItem(
+                order_id=new_order.order_id,
+                bean_id=bean.bean_id,
+                quantity=order_data["quantity"],
+                price=total_price,
+            )
+            session.add(new_order_item)
+
+            # Update bean stock
+            bean.stock_quantity -= order_data["quantity"]
+
+        session.commit()
+        st.success("Demo coffee beans and orders loaded successfully!")
+        st.rerun()
+    except Exception as e:
+        session.rollback()
+        st.error(f"Error loading demo data and orders: {e}")
+
 # Reset Data
 def reset_all_data():
     Base.metadata.drop_all(engine)
@@ -79,10 +146,14 @@ def reset_all_data():
     st.rerun()
     st.success("Database reset completed!")
 
-# Sidebar with Reset Option
+# Sidebar with Reset and Demo Data Buttons
 with st.sidebar:
     if st.button("🔄 Reset All Data"):
         reset_all_data()
+
+    if st.button("📥 Load Demo Data"):
+        load_demo_data_and_orders()
+
 
 # Add Coffee Bean
 def add_coffee_bean():
@@ -121,7 +192,7 @@ def update_coffee_bean():
             new_origin = st.text_input("New Origin", value=selected_bean.origin)
             new_roast_level = st.selectbox("New Roast Level", ["Light", "Medium", "Dark"], index=["Light", "Medium", "Dark"].index(selected_bean.roast_level))
             new_price = st.number_input("New Price per Gram ($)", min_value=0.01, value=selected_bean.price_per_gram)
-            new_stock = st.number_input("New Stock Quantity", min_value=1, value=selected_bean.stock_quantity)
+            new_stock = st.number_input("New Stock Quantity", min_value=0, value=selected_bean.stock_quantity)
 
             if st.button("Update Coffee Bean"):
                 try:
@@ -165,7 +236,7 @@ def view_available_beans():
         SELECT name, origin, roast_level, price_per_gram, stock_quantity
         FROM CoffeeBeans
         WHERE stock_quantity > 0
-        ORDER BY name ASC
+        ORDER BY stock_quantity DESC;
     """)
     available_beans = session.execute(available_beans_query).fetchall()
     
@@ -204,12 +275,14 @@ def place_order():
             st.write(f"**Price per Gram**: ${selected_bean.price_per_gram:.2f}")
             st.write(f"**Available Stock**: {selected_bean.stock_quantity} grams")
 
+            # Ensure stock is greater than 0 before allowing order placement
             if selected_bean.stock_quantity > 0:
                 # Input for quantity
+                max_quantity = selected_bean.stock_quantity  # Max quantity for the order
                 quantity = st.number_input(
                     f"Select quantity for {selected_bean.name}",
                     min_value=1,
-                    max_value=selected_bean.stock_quantity,
+                    max_value=max_quantity,  # Use the actual available stock
                     step=1
                 )
 
@@ -245,7 +318,7 @@ def place_order():
 
                         # Commit the transaction
                         session.commit()
-                        st.success(f"Order placed for {quantity} grams of {selected_bean.name}!")
+                        st.success(f"Order placed for {quantity} grams of {selected_bean.name}! Remaining stock: {selected_bean.stock_quantity} grams.")
                         st.rerun()
                     except Exception as e:
                         # Roll back in case of error
@@ -274,15 +347,26 @@ def delete_order():
                 session.rollback()
                 st.error(f"Error deleting order: {e}")
 
-# View All Orders
+# View All Orders with Bean Details
 def view_orders():
-    st.header("All Orders")
+    st.header("All Orders with Coffee Bean Details")
 
-    # Query to fetch orders with user details
+    # Query to fetch orders with user, bean, and order details
     orders_query = text("""
-        SELECT Orders.order_id, Users.name AS user_name, Orders.status, Orders.total_price, Orders.order_date
+        SELECT 
+            Orders.order_id,
+            Users.name AS user_name,
+            Orders.status,
+            Orders.total_price,
+            Orders.order_date,
+            CoffeeBeans.name AS bean_name,
+            CoffeeBeans.origin,
+            CoffeeBeans.roast_level,
+            OrderItems.quantity
         FROM Orders
         JOIN Users ON Orders.user_id = Users.user_id
+        JOIN OrderItems ON Orders.order_id = OrderItems.order_id
+        JOIN CoffeeBeans ON OrderItems.bean_id = CoffeeBeans.bean_id
         ORDER BY Orders.order_date DESC
     """)
     orders = session.execute(orders_query).fetchall()
@@ -290,23 +374,17 @@ def view_orders():
     # List to store the final data
     orders_data = []
 
-    # Add a column for total quantity ordered
     for order in orders:
-        # Query to calculate the total amount ordered for each order
-        total_quantity_query = text("""
-            SELECT SUM(OrderItems.quantity) AS total_quantity
-            FROM OrderItems
-            WHERE OrderItems.order_id = :order_id
-        """)
-        total_quantity = session.execute(total_quantity_query, {"order_id": order.order_id}).scalar() or 0
-
         orders_data.append({
             "Order ID": order.order_id,
             "User": order.user_name,
             "Status": order.status,
             "Total Price": f"${order.total_price:.2f}",
-            "Amount Ordered (grams)": total_quantity,
-            "Order Date": order.order_date.strftime("%Y-%m-%d") if isinstance(order.order_date, datetime) else order.order_date
+            "Order Date": order.order_date.strftime("%Y-%m-%d") if isinstance(order.order_date, datetime) else order.order_date,
+            "Bean Name": order.bean_name,
+            "Origin": order.origin,
+            "Roast Level": order.roast_level,
+            "Quantity (grams)": order.quantity
         })
 
     if orders_data:
