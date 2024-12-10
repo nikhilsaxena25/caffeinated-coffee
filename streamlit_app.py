@@ -6,8 +6,8 @@ from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from datetime import datetime
 import pandas as pd
 
-# Database setup with READ UNCOMMITTED isolation level
-engine = create_engine('sqlite:///caffeinated.db', isolation_level="READ UNCOMMITTED")
+# Database setup with SERIALIZABLE isolation level
+engine = create_engine('sqlite:///caffeinated.db', isolation_level="SERIALIZABLE")
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()
@@ -151,7 +151,7 @@ with st.sidebar:
     if st.button("🔄 Reset All Data"):
         reset_all_data()
 
-    if st.button("📥 Load Demo Data"):
+    if st.button("📥 Load Demo Data (reset all data before!)"):
         load_demo_data_and_orders()
 
 
