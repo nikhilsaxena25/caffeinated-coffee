@@ -1,8 +1,6 @@
-# 🎈 Blank app template
+# 🎈 Caffeinated Coffe
 
-A simple Streamlit app template for you to modify!
-
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+A simple Streamlit app for a coffee shop!]
 
 ### How to run it on your own machine
 
@@ -16,4 +14,10 @@ A simple Streamlit app template for you to modify!
 
    ```
    $ streamlit run streamlit_app.py
+   ```
+
+3. If above doesn't work, open the app:
+   
+   ```
+   https://caffeinated-coffee.streamlit.app/
    ```
