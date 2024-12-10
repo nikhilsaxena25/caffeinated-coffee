@@ -54,10 +54,10 @@ Order.items = relationship("OrderItem", back_populates="order")
 Base.metadata.create_all(engine)
 
 # Indexes for Optimization
-session.execute(text("CREATE INDEX IF NOT EXISTS idx_order_date ON Orders(order_date);"))
-session.execute(text("CREATE INDEX IF NOT EXISTS idx_stock_quantity ON CoffeeBeans(stock_quantity);"))
-session.execute(text("CREATE INDEX IF NOT EXISTS idx_user_id ON Orders(user_id);"))
-session.execute(text("CREATE INDEX IF NOT EXISTS idx_status ON Orders(status);"))
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_order_date ON Orders(order_date);")) # Optimizes queries that filter or sort orders based on their date.
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_stock_quantity ON CoffeeBeans(stock_quantity);")) # Speeds up queries that filter coffee beans based on their stock.
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_user_id ON Orders(user_id);")) # Enhances queries that filter orders based on a specific user.
+session.execute(text("CREATE INDEX IF NOT EXISTS idx_status ON Orders(status);")) # Speeds up queries that filter orders based on their current status.
 
 # Streamlit UI
 st.set_page_config(page_title="Caffeinated", page_icon="☕", layout="wide")
@@ -282,7 +282,7 @@ def place_order():
                 quantity = st.number_input(
                     f"Select quantity for {selected_bean.name}",
                     min_value=1,
-                    max_value=max_quantity,  # Use the actual available stock
+                    max_value=max_quantity, 
                     step=1
                 )
 
@@ -401,7 +401,6 @@ def update_order_status():
     orders = session.query(Order).all()
 
     if orders:
-        # Iterate through each order and provide options for status update
         for order in orders:
             st.write(f"Order ID: {order.order_id} - Current Status: {order.status}")
 
