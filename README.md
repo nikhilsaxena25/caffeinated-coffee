@@ -1,4 +1,4 @@
-# 🎈 Caffeinated Coffe
+# 🎈 Caffeinated Coffee
 
 A simple Streamlit app for a coffee shop!]
 
